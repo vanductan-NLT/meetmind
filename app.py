@@ -164,7 +164,7 @@ with col1:
     audio_file = st.file_uploader(
         "Meeting Recording",
         type=list(ALLOWED_AUDIO_EXT),
-        help="MP3, M4A, or WAV · recommended under 10 min",
+        help="MP3, M4A, or WAV · up to 60 min",
     )
 with col2:
     doc_file = st.file_uploader(

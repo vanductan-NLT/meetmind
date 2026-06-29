@@ -2,7 +2,7 @@
 
 Multimodal meeting notes system (CS117 — Nhóm 5, UIT).
 
-**Pipeline:** audio + document → transcript (ElevenLabs Scribe) → analysis (DeepSeek) → PDF with summary, to-do list, and conflict warnings.
+**Pipeline:** audio + document → transcript (AssemblyAI) → analysis (DeepSeek) → PDF with summary, to-do list, and conflict warnings.
 
 ## Quick Start
 
@@ -33,7 +33,7 @@ Then open http://localhost:8501 in your browser.
 
 | Key | Where to get |
 |-----|-------------|
-| `ELEVENLABS_API_KEY` | https://elevenlabs.io — free tier available |
+| `ASSEMBLYAI_API_KEY` | https://assemblyai.com — 5h free/month, no credit card |
 | `DEEPSEEK_API_KEY` | https://platform.deepseek.com — free credits on signup |
 
 ## Input Constraints
@@ -61,7 +61,7 @@ meetmind/
 ├── .env.example
 ├── src/
 │   ├── config.py             # API keys + constants
-│   ├── audio_transcription.py  # ElevenLabs Scribe STT
+│   ├── audio_transcription.py  # AssemblyAI STT
 │   ├── document_extraction.py  # MarkItDown document parser (pdf/docx/md/txt/json)
 │   ├── content_analysis.py   # DeepSeek JSON analysis
 │   ├── output_generator.py   # HTML + PDF renderer

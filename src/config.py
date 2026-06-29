@@ -11,7 +11,7 @@ load_dotenv()
 # Read from env at import time (safe for both local and Streamlit Cloud).
 # On Streamlit Cloud, keys must also be set as environment variables in Secrets
 # (Streamlit injects st.secrets entries as env vars automatically since v1.28).
-ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
+ASSEMBLYAI_API_KEY: str = os.getenv("ASSEMBLYAI_API_KEY", "")
 DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
 
 STT_MODEL = "scribe_v1"
@@ -25,10 +25,10 @@ ALLOWED_DOC_EXT = {"pdf", "txt", "md", "docx", "json"}
 
 def reload_keys() -> None:
     """Re-read keys at runtime (called by app.py so st.secrets is available)."""
-    global ELEVENLABS_API_KEY, DEEPSEEK_API_KEY
+    global ASSEMBLYAI_API_KEY, DEEPSEEK_API_KEY
     try:
         import streamlit as st
-        ELEVENLABS_API_KEY = st.secrets.get("ELEVENLABS_API_KEY", os.getenv("ELEVENLABS_API_KEY", ""))
+        ASSEMBLYAI_API_KEY = st.secrets.get("ASSEMBLYAI_API_KEY", os.getenv("ASSEMBLYAI_API_KEY", ""))
         DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", os.getenv("DEEPSEEK_API_KEY", ""))
     except Exception:
         pass  # already loaded from .env above
@@ -38,8 +38,8 @@ def validate_keys() -> None:
     """Re-read secrets then raise ValueError if any key is missing."""
     reload_keys()
     missing = []
-    if not ELEVENLABS_API_KEY:
-        missing.append("ELEVENLABS_API_KEY")
+    if not ASSEMBLYAI_API_KEY:
+        missing.append("ASSEMBLYAI_API_KEY")
     if not DEEPSEEK_API_KEY:
         missing.append("DEEPSEEK_API_KEY")
     if missing:
