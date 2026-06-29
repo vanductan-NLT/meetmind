@@ -206,7 +206,7 @@ if generate:
         with open(doc_path, "wb") as f:
             f.write(doc_file.read())
 
-        result = None
+        st.session_state.pop("result", None)
 
         try:
             with st.status("Analyzing your meeting…", expanded=True) as status:
@@ -236,7 +236,7 @@ if generate:
 
                 status.update(label="Done", state="complete", expanded=False)
 
-            result = {
+            st.session_state["result"] = {
                 "transcript": transcript,
                 "doc_text": doc_text,
                 "analysis": analysis,
@@ -252,88 +252,89 @@ if generate:
         except RuntimeError as e:
             st.error(f"Pipeline error: {e}")
 
-    # ── Results ───────────────────────────────────────────────────────────────
-    if result:
-        analysis = result["analysis"]
-        todos = analysis.get("todos", [])
-        conflicts = analysis.get("conflicts", [])
+# ── Results ───────────────────────────────────────────────────────────────
+if st.session_state.get("result"):
+    result = st.session_state["result"]
+    analysis = result["analysis"]
+    todos = analysis.get("todos", [])
+    conflicts = analysis.get("conflicts", [])
 
-        st.download_button(
-            label="Download PDF Report",
-            data=result["pdf_bytes"],
-            file_name="meeting_notes.pdf",
-            mime="application/pdf",
-            type="primary",
-            use_container_width=True,
-        )
+    st.download_button(
+        label="Download PDF Report",
+        data=result["pdf_bytes"],
+        file_name="meeting_notes.pdf",
+        mime="application/pdf",
+        type="primary",
+        use_container_width=True,
+    )
 
-        st.divider()
+    st.divider()
 
-        # ── Summary ───────────────────────────────────────────────────────────
-        st.subheader("Executive Summary")
-        st.info(analysis.get("summary", ""))
+    # ── Summary ───────────────────────────────────────────────────────────
+    st.subheader("Executive Summary")
+    st.info(analysis.get("summary", ""))
 
-        # ── Action Items ──────────────────────────────────────────────────────
-        st.subheader(f"Action Items — {len(todos)}")
+    # ── Action Items ──────────────────────────────────────────────────────
+    st.subheader(f"Action Items — {len(todos)}")
 
-        if todos:
-            for item in todos:
-                assignee = item.get("assignee") or "—"
-                deadline = item.get("deadline") or "—"
-                source = "Audio" if item.get("source_ref") == "audio" else "Document"
-                with st.container(border=True):
-                    left, right = st.columns([7, 3])
-                    with left:
-                        st.markdown(f"**{item.get('task', '')}**")
-                        st.caption(f'"{item.get("source_quote", "")}"')
-                    with right:
-                        st.markdown(
-                            f"<div style='font-size:0.82rem; color:#64748B; line-height:1.8;'>"
-                            f"<b style='color:#1E293B'>Assignee</b><br>{assignee}<br>"
-                            f"<b style='color:#1E293B'>Due</b><br>{deadline}<br>"
-                            f"<b style='color:#1E293B'>Source</b><br>{source}"
-                            f"</div>",
-                            unsafe_allow_html=True,
-                        )
-        else:
-            st.caption("No action items identified.")
-
-        # ── Discrepancies ─────────────────────────────────────────────────────
-        st.subheader(f"Discrepancies — {len(conflicts)}")
-
-        if conflicts:
-            for c in conflicts:
-                with st.container(border=True):
+    if todos:
+        for item in todos:
+            assignee = item.get("assignee") or "—"
+            deadline = item.get("deadline") or "—"
+            source = "Audio" if item.get("source_ref") == "audio" else "Document"
+            with st.container(border=True):
+                left, right = st.columns([7, 3])
+                with left:
+                    st.markdown(f"**{item.get('task', '')}**")
+                    st.caption(f'"{item.get("source_quote", "")}"')
+                with right:
                     st.markdown(
-                        f"<span style='font-weight:700; color:#B91C1C;'>"
-                        f"{c.get('topic', '')}</span>",
+                        f"<div style='font-size:0.82rem; color:#64748B; line-height:1.8;'>"
+                        f"<b style='color:#1E293B'>Assignee</b><br>{assignee}<br>"
+                        f"<b style='color:#1E293B'>Due</b><br>{deadline}<br>"
+                        f"<b style='color:#1E293B'>Source</b><br>{source}"
+                        f"</div>",
                         unsafe_allow_html=True,
                     )
-                    col_a, col_b = st.columns(2)
-                    with col_a:
-                        st.markdown(
-                            "<span style='font-size:0.78rem; font-weight:700; "
-                            "text-transform:uppercase; letter-spacing:0.07em; "
-                            "color:#94A3B8;'>Audio Recording</span>",
-                            unsafe_allow_html=True,
-                        )
-                        st.markdown(f"**{c.get('audio_value', '')}**")
-                        st.caption(f'"{c.get("audio_quote", "")}"')
-                    with col_b:
-                        st.markdown(
-                            "<span style='font-size:0.78rem; font-weight:700; "
-                            "text-transform:uppercase; letter-spacing:0.07em; "
-                            "color:#94A3B8;'>Reference Document</span>",
-                            unsafe_allow_html=True,
-                        )
-                        st.markdown(f"**{c.get('doc_value', '')}**")
-                        st.caption(f'"{c.get("doc_quote", "")}"')
-        else:
-            st.success("No discrepancies detected between the recording and reference document.")
+    else:
+        st.caption("No action items identified.")
 
-        # ── Raw data (collapsible) ─────────────────────────────────────────────
-        st.divider()
-        with st.expander("View transcript"):
-            st.text(result["transcript"])
-        with st.expander("View document text"):
-            st.text(result["doc_text"])
+    # ── Discrepancies ─────────────────────────────────────────────────────
+    st.subheader(f"Discrepancies — {len(conflicts)}")
+
+    if conflicts:
+        for c in conflicts:
+            with st.container(border=True):
+                st.markdown(
+                    f"<span style='font-weight:700; color:#B91C1C;'>"
+                    f"{c.get('topic', '')}</span>",
+                    unsafe_allow_html=True,
+                )
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.markdown(
+                        "<span style='font-size:0.78rem; font-weight:700; "
+                        "text-transform:uppercase; letter-spacing:0.07em; "
+                        "color:#94A3B8;'>Audio Recording</span>",
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(f"**{c.get('audio_value', '')}**")
+                    st.caption(f'"{c.get("audio_quote", "")}"')
+                with col_b:
+                    st.markdown(
+                        "<span style='font-size:0.78rem; font-weight:700; "
+                        "text-transform:uppercase; letter-spacing:0.07em; "
+                        "color:#94A3B8;'>Reference Document</span>",
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(f"**{c.get('doc_value', '')}**")
+                    st.caption(f'"{c.get("doc_quote", "")}"')
+    else:
+        st.success("No discrepancies detected between the recording and reference document.")
+
+    # ── Raw data (collapsible) ─────────────────────────────────────────────
+    st.divider()
+    with st.expander("View transcript"):
+        st.text(result["transcript"])
+    with st.expander("View document text"):
+        st.text(result["doc_text"])
