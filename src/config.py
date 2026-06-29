@@ -20,7 +20,7 @@ DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 
 MAX_FILE_MB = 50
 ALLOWED_AUDIO_EXT = {"mp3", "m4a", "wav"}
-ALLOWED_DOC_EXT = {"pdf", "txt", "md", "docx"}
+ALLOWED_DOC_EXT = {"pdf", "txt", "md", "docx", "json"}
 
 
 def reload_keys() -> None:

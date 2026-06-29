@@ -1,5 +1,6 @@
-"""Extract plain text from meeting documents (pdf/txt/md/docx) via MarkItDown."""
+"""Extract plain text from meeting documents (pdf/txt/md/docx/json) via MarkItDown."""
 import os
+import json
 
 # Lazy init — avoids hanging at import time when MarkItDown loads optional deps
 _converter = None
@@ -23,9 +24,13 @@ def extract(doc_path: str) -> str:
         raise FileNotFoundError(f"Document file not found: {doc_path}")
 
     ext = os.path.splitext(doc_path)[1].lstrip(".").lower()
-    allowed = {"pdf", "txt", "md", "docx"}
+    allowed = {"pdf", "txt", "md", "docx", "json"}
     if ext not in allowed:
         raise ValueError(f"Unsupported document format '.{ext}'. Use: {', '.join(sorted(allowed))}.")
+
+    # JSON: dump as readable text instead of going through MarkItDown
+    if ext == "json":
+        return _extract_json(doc_path)
 
     try:
         result = _get_converter().convert(doc_path)
@@ -36,3 +41,15 @@ def extract(doc_path: str) -> str:
     if not text:
         raise RuntimeError("Document appears to be empty or contains no extractable text.")
     return text
+
+
+def _extract_json(doc_path: str) -> str:
+    """Read a JSON file and return it as indented text for the LLM."""
+    try:
+        with open(doc_path, encoding="utf-8") as f:
+            data = json.load(f)
+        return json.dumps(data, ensure_ascii=False, indent=2)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Invalid JSON file: {exc}") from exc
+    except Exception as exc:
+        raise RuntimeError(f"Failed to read JSON file: {exc}") from exc
