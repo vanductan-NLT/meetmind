@@ -161,50 +161,60 @@ except ValueError as e:
 # ── File uploaders ────────────────────────────────────────────────────────────
 col1, col2 = st.columns(2)
 with col1:
-    audio_file = st.file_uploader(
+    audio_files = st.file_uploader(
         "Meeting Recording",
         type=list(ALLOWED_AUDIO_EXT),
-        help="MP3, M4A, or WAV · up to 60 min",
+        help="MP3, M4A, or WAV · up to 60 min · multiple files allowed",
+        accept_multiple_files=True,
     )
 with col2:
-    doc_file = st.file_uploader(
+    doc_files = st.file_uploader(
         "Reference Document",
         type=list(ALLOWED_DOC_EXT),
-        help="PDF, DOCX, MD, TXT, or JSON — slides or meeting docs",
+        help="PDF, DOCX, MD, TXT, or JSON — multiple files allowed",
+        accept_multiple_files=True,
     )
 
 
-def _check_size(uploaded, label: str) -> bool:
-    if uploaded and uploaded.size > MAX_FILE_MB * 1024 * 1024:
-        st.error(f"{label} exceeds the {MAX_FILE_MB} MB limit.")
+def _check_total_size(files: list, label: str) -> bool:
+    total = sum(f.size for f in files)
+    if total > MAX_FILE_MB * 1024 * 1024:
+        mb = total / 1024 / 1024
+        st.error(f"{label} total size {mb:.1f} MB exceeds the {MAX_FILE_MB} MB limit.")
         return False
     return True
 
 
-audio_ok = _check_size(audio_file, "Recording")
-doc_ok = _check_size(doc_file, "Document")
+audio_ok = _check_total_size(audio_files, "Recording") if audio_files else True
+doc_ok = _check_total_size(doc_files, "Document") if doc_files else True
 
 st.markdown("<div style='height:0.25rem'></div>", unsafe_allow_html=True)
 
 # ── Generate button ───────────────────────────────────────────────────────────
 generate = st.button(
     "Generate Meeting Notes",
-    disabled=not (audio_file and doc_file and audio_ok and doc_ok),
+    disabled=not (audio_files and doc_files and audio_ok and doc_ok),
     type="primary",
     use_container_width=True,
 )
 
 if generate:
     with tempfile.TemporaryDirectory() as tmpdir:
-        audio_ext = os.path.splitext(audio_file.name)[1]
-        doc_ext = os.path.splitext(doc_file.name)[1]
-        audio_path = os.path.join(tmpdir, f"audio{audio_ext}")
-        doc_path = os.path.join(tmpdir, f"document{doc_ext}")
+        audio_paths, doc_paths = [], []
 
-        with open(audio_path, "wb") as f:
-            f.write(audio_file.read())
-        with open(doc_path, "wb") as f:
-            f.write(doc_file.read())
+        for i, f in enumerate(audio_files):
+            ext = os.path.splitext(f.name)[1]
+            path = os.path.join(tmpdir, f"audio_{i}{ext}")
+            with open(path, "wb") as fp:
+                fp.write(f.read())
+            audio_paths.append(path)
+
+        for i, f in enumerate(doc_files):
+            ext = os.path.splitext(f.name)[1]
+            path = os.path.join(tmpdir, f"doc_{i}{ext}")
+            with open(path, "wb") as fp:
+                fp.write(f.read())
+            doc_paths.append(path)
 
         st.session_state.pop("result", None)
 
@@ -212,13 +222,19 @@ if generate:
             with st.status("Analyzing your meeting…", expanded=True) as status:
                 st.write("Transcribing audio…")
                 from src.audio_transcription import transcribe
-                transcript = transcribe(audio_path)
-                st.write("✓ Audio transcribed")
+                transcripts = []
+                for path in audio_paths:
+                    transcripts.append(transcribe(path))
+                transcript = "\n\n---\n\n".join(transcripts)
+                st.write(f"✓ {len(audio_paths)} audio file{'s' if len(audio_paths) > 1 else ''} transcribed")
 
                 st.write("Reading document…")
                 from src.document_extraction import extract
-                doc_text = extract(doc_path)
-                st.write("✓ Document processed")
+                doc_texts = []
+                for path in doc_paths:
+                    doc_texts.append(extract(path))
+                doc_text = "\n\n---\n\n".join(doc_texts)
+                st.write(f"✓ {len(doc_paths)} document{'s' if len(doc_paths) > 1 else ''} processed")
 
                 st.write("Analyzing content…")
                 from src.content_analysis import analyze
