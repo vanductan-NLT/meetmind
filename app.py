@@ -164,14 +164,14 @@ with col1:
     audio_files = st.file_uploader(
         "Meeting Recording",
         type=list(ALLOWED_AUDIO_EXT),
-        help="MP3, M4A, or WAV · up to 60 min · multiple files allowed",
+        help="MP3, M4A, or WAV · up to 60 min · 50 MB total across all files",
         accept_multiple_files=True,
     )
 with col2:
     doc_files = st.file_uploader(
         "Reference Document",
         type=list(ALLOWED_DOC_EXT),
-        help="PDF, DOCX, MD, TXT, or JSON — multiple files allowed",
+        help="PDF, DOCX, MD, TXT, or JSON — 50 MB total across all files",
         accept_multiple_files=True,
     )
 

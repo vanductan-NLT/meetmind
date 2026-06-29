@@ -43,7 +43,7 @@ Then open http://localhost:8501 in your browser.
 | Audio | `.mp3`, `.m4a`, `.wav` | ≤ 50 MB |
 | Document | `.pdf`, `.docx`, `.md`, `.txt`, `.json` | ≤ 50 MB |
 
-**Demo tip:** Use a short audio clip (2–5 min) to save ElevenLabs STT credits.
+**Demo tip:** Use short audio clips (2–5 min each) to stay within AssemblyAI's free tier quota.
 
 ## Output
 
