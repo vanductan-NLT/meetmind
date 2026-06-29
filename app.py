@@ -41,7 +41,7 @@ with col2:
     doc_file = st.file_uploader(
         "📄 Reference document",
         type=list(ALLOWED_DOC_EXT),
-        help="PDF, DOCX, MD, or TXT — slides or meeting docs",
+        help="PDF, DOCX, MD, TXT, or JSON — slides or meeting docs",
     )
 
 # ── File size guard ───────────────────────────────────────────────────────────
