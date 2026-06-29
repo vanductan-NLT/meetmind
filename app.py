@@ -1,26 +1,155 @@
-"""MeetMind — Streamlit demo app.
+"""MeetMind — AI-powered meeting notes.
 
 Upload a meeting audio file + a reference document to generate:
-  • Meeting summary
-  • To-do list (task, assignee, deadline, source quote)
-  • Conflict warnings (discrepancies between audio and document)
-Output is rendered on screen and downloadable as PDF.
+  • Executive summary
+  • Action items (assignee, deadline, source quote)
+  • Discrepancy report (audio vs document)
+Output rendered on screen and downloadable as PDF.
 """
 import os
 import tempfile
 import streamlit as st
 from src.config import validate_keys, MAX_FILE_MB, ALLOWED_AUDIO_EXT, ALLOWED_DOC_EXT
-from src.pipeline import run
 
-# ── Page config ──────────────────────────────────────────────────────────────
+# ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="MeetMind",
     page_icon="🧠",
     layout="centered",
 )
 
-st.title("🧠 MeetMind")
-st.caption("Upload your meeting audio and reference document to get structured notes.")
+# ── Custom CSS ────────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* ── Layout ─────────────────────────────────────────────── */
+.block-container {
+    padding-top: 2.25rem !important;
+    padding-bottom: 3rem !important;
+    max-width: 840px !important;
+}
+
+/* ── Typography ─────────────────────────────────────────── */
+h1 {
+    font-size: 1.85rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    color: #0F172A !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0.1rem !important;
+}
+h2, h3 {
+    font-weight: 600 !important;
+    letter-spacing: -0.015em !important;
+    color: #1E293B !important;
+}
+[data-testid="stCaptionContainer"] p,
+.stCaption p {
+    font-size: 0.92rem !important;
+    color: #64748B !important;
+    margin-top: 0.1rem !important;
+}
+
+/* ── Primary button ─────────────────────────────────────── */
+div[data-testid="stButton"] > button[kind="primary"] {
+    background: #0F172A !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.93rem !important;
+    letter-spacing: 0.02em !important;
+    height: 2.75rem !important;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s !important;
+}
+div[data-testid="stButton"] > button[kind="primary"]:hover:not(:disabled) {
+    background: #1E293B !important;
+    box-shadow: 0 4px 16px rgba(15,23,42,0.22) !important;
+    transform: translateY(-1px) !important;
+}
+div[data-testid="stButton"] > button[kind="primary"]:disabled {
+    background: #CBD5E1 !important;
+    color: #94A3B8 !important;
+}
+
+/* ── Download button ─────────────────────────────────────── */
+div[data-testid="stDownloadButton"] > button {
+    background: #059669 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 0.93rem !important;
+    letter-spacing: 0.02em !important;
+    height: 2.75rem !important;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s !important;
+}
+div[data-testid="stDownloadButton"] > button:hover {
+    background: #047857 !important;
+    box-shadow: 0 4px 16px rgba(5,150,105,0.28) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* ── File uploader ───────────────────────────────────────── */
+[data-testid="stFileUploaderDropzone"] {
+    background: #F8FAFC !important;
+    border: 1.5px dashed #CBD5E1 !important;
+    border-radius: 10px !important;
+    transition: border-color 0.2s, background 0.2s !important;
+}
+[data-testid="stFileUploaderDropzone"]:hover {
+    border-color: #93C5FD !important;
+    background: #F0F9FF !important;
+}
+
+/* ── Bordered containers (cards) ─────────────────────────── */
+[data-testid="stVerticalBlockBorderWrapper"] > div {
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
+    background: #FFFFFF !important;
+}
+
+/* ── Alerts / info boxes ─────────────────────────────────── */
+[data-baseweb="notification"] {
+    border-radius: 8px !important;
+    border: none !important;
+    font-size: 0.92rem !important;
+    line-height: 1.65 !important;
+}
+
+/* ── Expander ────────────────────────────────────────────── */
+details summary {
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.07em !important;
+    color: #94A3B8 !important;
+}
+
+/* ── Divider ─────────────────────────────────────────────── */
+hr {
+    border: none !important;
+    border-top: 1px solid #E2E8F0 !important;
+    margin: 1.75rem 0 !important;
+}
+
+/* ── Status widget ───────────────────────────────────────── */
+[data-testid="stStatus"] {
+    border-radius: 8px !important;
+}
+
+/* ── Hide Streamlit chrome ───────────────────────────────── */
+#MainMenu          { visibility: hidden !important; }
+footer             { visibility: hidden !important; }
+[data-testid="stToolbar"] { display: none !important; }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Header ────────────────────────────────────────────────────────────────────
+st.title("MeetMind")
+st.caption("Turn your meeting recordings into structured, actionable notes in seconds.")
+
+st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
 # ── API key validation ────────────────────────────────────────────────────────
 try:
@@ -33,30 +162,33 @@ except ValueError as e:
 col1, col2 = st.columns(2)
 with col1:
     audio_file = st.file_uploader(
-        "🎙 Meeting audio",
+        "Meeting Recording",
         type=list(ALLOWED_AUDIO_EXT),
-        help="MP3, M4A, or WAV — recommended under 10 min for demo",
+        help="MP3, M4A, or WAV · recommended under 10 min",
     )
 with col2:
     doc_file = st.file_uploader(
-        "📄 Reference document",
+        "Reference Document",
         type=list(ALLOWED_DOC_EXT),
         help="PDF, DOCX, MD, TXT, or JSON — slides or meeting docs",
     )
 
-# ── File size guard ───────────────────────────────────────────────────────────
+
 def _check_size(uploaded, label: str) -> bool:
     if uploaded and uploaded.size > MAX_FILE_MB * 1024 * 1024:
-        st.error(f"{label} exceeds {MAX_FILE_MB} MB limit ({uploaded.size // (1024*1024)} MB uploaded).")
+        st.error(f"{label} exceeds the {MAX_FILE_MB} MB limit.")
         return False
     return True
 
-audio_ok = _check_size(audio_file, "Audio file")
-doc_ok = _check_size(doc_file, "Document file")
+
+audio_ok = _check_size(audio_file, "Recording")
+doc_ok = _check_size(doc_file, "Document")
+
+st.markdown("<div style='height:0.25rem'></div>", unsafe_allow_html=True)
 
 # ── Generate button ───────────────────────────────────────────────────────────
 generate = st.button(
-    "⚡ Generate Meeting Notes",
+    "Generate Meeting Notes",
     disabled=not (audio_file and doc_file and audio_ok and doc_ok),
     type="primary",
     use_container_width=True,
@@ -64,7 +196,6 @@ generate = st.button(
 
 if generate:
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Save uploads to temp files
         audio_ext = os.path.splitext(audio_file.name)[1]
         doc_ext = os.path.splitext(doc_file.name)[1]
         audio_path = os.path.join(tmpdir, f"audio{audio_ext}")
@@ -75,37 +206,35 @@ if generate:
         with open(doc_path, "wb") as f:
             f.write(doc_file.read())
 
-        # ── Run pipeline with step-by-step status ────────────────────────────
         result = None
-        status_placeholder = st.empty()
 
         try:
-            with st.status("Generating your meeting notes…", expanded=True) as status:
-                st.write("🎙 Converting audio to text…")
+            with st.status("Analyzing your meeting…", expanded=True) as status:
+                st.write("Transcribing audio…")
                 from src.audio_transcription import transcribe
                 transcript = transcribe(audio_path)
                 st.write("✓ Audio transcribed")
 
-                st.write("📄 Reading document…")
+                st.write("Reading document…")
                 from src.document_extraction import extract
                 doc_text = extract(doc_path)
                 st.write("✓ Document processed")
 
-                st.write("🤖 Analyzing meeting content…")
+                st.write("Analyzing content…")
                 from src.content_analysis import analyze
                 analysis = analyze(transcript, doc_text)
                 n_todos = len(analysis.get("todos", []))
                 n_conflicts = len(analysis.get("conflicts", []))
-                st.write(f"✓ Found {n_todos} action item(s) · {n_conflicts} conflict(s)")
+                st.write(f"✓ {n_todos} action item{'s' if n_todos != 1 else ''} · {n_conflicts} discrepanc{'ies' if n_conflicts != 1 else 'y'}")
 
-                st.write("📑 Preparing your notes…")
+                st.write("Preparing notes…")
                 from src.output_generator import to_html, to_markdown, to_pdf
                 html = to_html(analysis)
                 pdf_bytes = to_pdf(html)
                 markdown = to_markdown(analysis)
                 st.write("✓ Notes ready")
 
-                status.update(label="✅ Done!", state="complete", expanded=False)
+                status.update(label="Done", state="complete", expanded=False)
 
             result = {
                 "transcript": transcript,
@@ -129,9 +258,8 @@ if generate:
         todos = analysis.get("todos", [])
         conflicts = analysis.get("conflicts", [])
 
-        # Download button at top
         st.download_button(
-            label="⬇️ Download PDF",
+            label="Download PDF Report",
             data=result["pdf_bytes"],
             file_name="meeting_notes.pdf",
             mime="application/pdf",
@@ -142,43 +270,70 @@ if generate:
         st.divider()
 
         # ── Summary ───────────────────────────────────────────────────────────
-        st.subheader("📝 Summary")
+        st.subheader("Executive Summary")
         st.info(analysis.get("summary", ""))
 
-        # ── To-do list ────────────────────────────────────────────────────────
-        st.subheader(f"✅ To-do List ({len(todos)} item{'s' if len(todos) != 1 else ''})")
+        # ── Action Items ──────────────────────────────────────────────────────
+        st.subheader(f"Action Items — {len(todos)}")
+
         if todos:
             for item in todos:
                 assignee = item.get("assignee") or "—"
                 deadline = item.get("deadline") or "—"
-                ref_icon = "🎙" if item.get("source_ref") == "audio" else "📄"
+                source = "Audio" if item.get("source_ref") == "audio" else "Document"
                 with st.container(border=True):
-                    st.markdown(f"**☐ {item.get('task', '')}**")
-                    st.caption(f"👤 {assignee}  ·  📅 {deadline}")
-                    st.markdown(f"> {ref_icon} *\"{item.get('source_quote', '')}\"*")
+                    left, right = st.columns([7, 3])
+                    with left:
+                        st.markdown(f"**{item.get('task', '')}**")
+                        st.caption(f'"{item.get("source_quote", "")}"')
+                    with right:
+                        st.markdown(
+                            f"<div style='font-size:0.82rem; color:#64748B; line-height:1.8;'>"
+                            f"<b style='color:#1E293B'>Assignee</b><br>{assignee}<br>"
+                            f"<b style='color:#1E293B'>Due</b><br>{deadline}<br>"
+                            f"<b style='color:#1E293B'>Source</b><br>{source}"
+                            f"</div>",
+                            unsafe_allow_html=True,
+                        )
         else:
-            st.write("*No action items found.*")
+            st.caption("No action items identified.")
 
-        # ── Conflict Warning ──────────────────────────────────────────────────
-        st.subheader(f"⚠️ Conflict Warning ({len(conflicts)})")
+        # ── Discrepancies ─────────────────────────────────────────────────────
+        st.subheader(f"Discrepancies — {len(conflicts)}")
+
         if conflicts:
             for c in conflicts:
                 with st.container(border=True):
-                    st.markdown(f"**⚠ {c.get('topic', '')}**")
+                    st.markdown(
+                        f"<span style='font-weight:700; color:#B91C1C;'>"
+                        f"{c.get('topic', '')}</span>",
+                        unsafe_allow_html=True,
+                    )
                     col_a, col_b = st.columns(2)
                     with col_a:
-                        st.markdown("**🎙 Audio says:**")
-                        st.markdown(f"`{c.get('audio_value', '')}`")
-                        st.caption(f"*\"{c.get('audio_quote', '')}\"*")
+                        st.markdown(
+                            "<span style='font-size:0.78rem; font-weight:700; "
+                            "text-transform:uppercase; letter-spacing:0.07em; "
+                            "color:#94A3B8;'>Audio Recording</span>",
+                            unsafe_allow_html=True,
+                        )
+                        st.markdown(f"**{c.get('audio_value', '')}**")
+                        st.caption(f'"{c.get("audio_quote", "")}"')
                     with col_b:
-                        st.markdown("**📄 Document says:**")
-                        st.markdown(f"`{c.get('doc_value', '')}`")
-                        st.caption(f"*\"{c.get('doc_quote', '')}\"*")
+                        st.markdown(
+                            "<span style='font-size:0.78rem; font-weight:700; "
+                            "text-transform:uppercase; letter-spacing:0.07em; "
+                            "color:#94A3B8;'>Reference Document</span>",
+                            unsafe_allow_html=True,
+                        )
+                        st.markdown(f"**{c.get('doc_value', '')}**")
+                        st.caption(f'"{c.get("doc_quote", "")}"')
         else:
-            st.success("✓ No conflicts detected between audio and document.")
+            st.success("No discrepancies detected between the recording and reference document.")
 
-        # ── Raw transcript (collapsible) ──────────────────────────────────────
-        with st.expander("📃 View raw transcript"):
+        # ── Raw data (collapsible) ─────────────────────────────────────────────
+        st.divider()
+        with st.expander("View transcript"):
             st.text(result["transcript"])
-        with st.expander("📋 View document text"):
+        with st.expander("View document text"):
             st.text(result["doc_text"])
