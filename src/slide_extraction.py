@@ -1,9 +1,16 @@
 """Extract plain text from meeting documents (pdf/txt/md/docx) via MarkItDown."""
 import os
-from markitdown import MarkItDown
+
+# Lazy init — avoids hanging at import time when MarkItDown loads optional deps
+_converter = None
 
 
-_converter = MarkItDown()
+def _get_converter():
+    global _converter
+    if _converter is None:
+        from markitdown import MarkItDown
+        _converter = MarkItDown()
+    return _converter
 
 
 def extract(doc_path: str) -> str:
@@ -21,7 +28,7 @@ def extract(doc_path: str) -> str:
         raise ValueError(f"Unsupported document format '.{ext}'. Use: {', '.join(sorted(allowed))}.")
 
     try:
-        result = _converter.convert(doc_path)
+        result = _get_converter().convert(doc_path)
     except Exception as exc:
         raise RuntimeError(f"Failed to extract text from document: {exc}") from exc
 

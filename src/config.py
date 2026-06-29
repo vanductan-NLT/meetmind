@@ -1,26 +1,18 @@
 """Load environment variables and shared constants.
 
-Supports two sources for API keys (in priority order):
-1. Streamlit Cloud secrets (st.secrets) — used when deployed on streamlit.io/cloud
-2. Local .env file via python-dotenv — used when running locally
+Local dev: reads from .env via python-dotenv.
+Streamlit Cloud: keys are injected via st.secrets at runtime (not at import time).
 """
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-
-def _get_secret(key: str) -> str:
-    """Read a secret from st.secrets (Streamlit Cloud) or env var (local)."""
-    try:
-        import streamlit as st
-        return st.secrets.get(key, os.getenv(key, ""))
-    except Exception:
-        return os.getenv(key, "")
-
-
-ELEVENLABS_API_KEY: str = _get_secret("ELEVENLABS_API_KEY")
-DEEPSEEK_API_KEY: str = _get_secret("DEEPSEEK_API_KEY")
+# Read from env at import time (safe for both local and Streamlit Cloud).
+# On Streamlit Cloud, keys must also be set as environment variables in Secrets
+# (Streamlit injects st.secrets entries as env vars automatically since v1.28).
+ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
+DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
 
 STT_MODEL = "scribe_v1"
 LLM_MODEL = "deepseek-chat"
@@ -31,8 +23,20 @@ ALLOWED_AUDIO_EXT = {"mp3", "m4a", "wav"}
 ALLOWED_DOC_EXT = {"pdf", "txt", "md", "docx"}
 
 
+def reload_keys() -> None:
+    """Re-read keys at runtime (called by app.py so st.secrets is available)."""
+    global ELEVENLABS_API_KEY, DEEPSEEK_API_KEY
+    try:
+        import streamlit as st
+        ELEVENLABS_API_KEY = st.secrets.get("ELEVENLABS_API_KEY", os.getenv("ELEVENLABS_API_KEY", ""))
+        DEEPSEEK_API_KEY = st.secrets.get("DEEPSEEK_API_KEY", os.getenv("DEEPSEEK_API_KEY", ""))
+    except Exception:
+        pass  # already loaded from .env above
+
+
 def validate_keys() -> None:
-    """Raise ValueError if any required API key is missing."""
+    """Re-read secrets then raise ValueError if any key is missing."""
+    reload_keys()
     missing = []
     if not ELEVENLABS_API_KEY:
         missing.append("ELEVENLABS_API_KEY")
