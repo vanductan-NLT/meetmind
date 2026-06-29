@@ -20,7 +20,7 @@ st.set_page_config(
 )
 
 st.title("🧠 MeetMind")
-st.caption("Multimodal meeting notes — summary · to-do · conflict detection")
+st.caption("Upload your meeting audio and reference document to get structured notes.")
 
 # ── API key validation ────────────────────────────────────────────────────────
 try:
@@ -80,30 +80,30 @@ if generate:
         status_placeholder = st.empty()
 
         try:
-            with st.status("Running pipeline…", expanded=True) as status:
-                st.write("🎙 Transcribing audio (ElevenLabs Scribe)…")
+            with st.status("Generating your meeting notes…", expanded=True) as status:
+                st.write("🎙 Converting audio to text…")
                 from src.audio_transcription import transcribe
                 transcript = transcribe(audio_path)
-                st.write(f"✓ Transcript: {len(transcript.split())} words")
+                st.write("✓ Audio transcribed")
 
-                st.write("📄 Extracting document text (MarkItDown)…")
+                st.write("📄 Reading document…")
                 from src.slide_extraction import extract
                 doc_text = extract(doc_path)
-                st.write(f"✓ Document: {len(doc_text.split())} words")
+                st.write("✓ Document processed")
 
-                st.write("🤖 Analyzing with DeepSeek (summary + to-do + conflicts)…")
+                st.write("🤖 Analyzing meeting content…")
                 from src.content_analysis import analyze
                 analysis = analyze(transcript, doc_text)
                 n_todos = len(analysis.get("todos", []))
                 n_conflicts = len(analysis.get("conflicts", []))
-                st.write(f"✓ {n_todos} task(s) · {n_conflicts} conflict(s) found")
+                st.write(f"✓ Found {n_todos} action item(s) · {n_conflicts} conflict(s)")
 
-                st.write("📑 Building PDF…")
+                st.write("📑 Preparing your notes…")
                 from src.output_generator import to_html, to_markdown, to_pdf
                 html = to_html(analysis)
                 pdf_bytes = to_pdf(html)
                 markdown = to_markdown(analysis)
-                st.write(f"✓ PDF ready ({len(pdf_bytes) // 1024} KB)")
+                st.write("✓ Notes ready")
 
                 status.update(label="✅ Done!", state="complete", expanded=False)
 
