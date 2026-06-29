@@ -87,7 +87,7 @@ if generate:
                 st.write("✓ Audio transcribed")
 
                 st.write("📄 Reading document…")
-                from src.slide_extraction import extract
+                from src.document_extraction import extract
                 doc_text = extract(doc_path)
                 st.write("✓ Document processed")
 

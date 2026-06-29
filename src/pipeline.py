@@ -1,6 +1,6 @@
 """Orchestrate the full MeetMind pipeline: audio + doc → transcript + analysis → PDF."""
 from src.audio_transcription import transcribe
-from src.slide_extraction import extract
+from src.document_extraction import extract
 from src.content_analysis import analyze
 from src.output_generator import to_html, to_markdown, to_pdf
 

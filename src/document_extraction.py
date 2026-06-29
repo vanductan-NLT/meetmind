@@ -17,7 +17,7 @@ def _get_converter():
 def extract(doc_path: str) -> str:
     """Return structured text content from a document file.
 
-    Supports pdf, txt, md, docx. Preserves headings when present.
+    Supports pdf, txt, md, docx, json. Preserves headings when present.
     Raises RuntimeError with a user-friendly message on failure.
     """
     if not os.path.exists(doc_path):
