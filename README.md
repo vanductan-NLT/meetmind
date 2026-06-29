@@ -1,6 +1,6 @@
 # MeetMind — Demo
 
-Multimodal meeting notes system (CS117 — Nhóm 5, UIT).
+Multimodal meeting notes system (CS117 — Group 5, UIT).
 
 **Pipeline:** audio + document → transcript (AssemblyAI) → analysis (DeepSeek) → PDF with summary, to-do list, and conflict warnings.
 
@@ -40,10 +40,8 @@ Then open http://localhost:8501 in your browser.
 
 | Type | Formats | Limit |
 |------|---------|-------|
-| Audio | `.mp3`, `.m4a`, `.wav` | ≤ 50 MB |
-| Document | `.pdf`, `.docx`, `.md`, `.txt`, `.json` | ≤ 50 MB |
-
-**Demo tip:** Use short audio clips (2–5 min each) to stay within AssemblyAI's free tier quota.
+| Audio | `.mp3`, `.m4a`, `.wav` | ≤ 100 MB total (multiple files) |
+| Document | `.pdf`, `.docx`, `.md`, `.txt`, `.json` | ≤ 50 MB total (multiple files) |
 
 ## Output
 

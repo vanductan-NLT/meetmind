@@ -9,7 +9,7 @@ Output rendered on screen and downloadable as PDF.
 import os
 import tempfile
 import streamlit as st
-from src.config import validate_keys, MAX_FILE_MB, ALLOWED_AUDIO_EXT, ALLOWED_DOC_EXT
+from src.config import validate_keys, MAX_AUDIO_MB, MAX_DOC_MB, ALLOWED_AUDIO_EXT, ALLOWED_DOC_EXT
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -142,6 +142,9 @@ hr {
 #MainMenu          { visibility: hidden !important; }
 footer             { visibility: hidden !important; }
 [data-testid="stToolbar"] { display: none !important; }
+
+/* ── Hide auto-generated "XMB per file" label in uploader ── */
+[data-testid="stFileUploaderDropzoneInstructions"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -164,29 +167,29 @@ with col1:
     audio_files = st.file_uploader(
         "Meeting Recording",
         type=list(ALLOWED_AUDIO_EXT),
-        help="MP3, M4A, or WAV · up to 60 min · 50 MB total across all files",
         accept_multiple_files=True,
     )
+    st.caption("MP3, M4A, WAV · up to 60 min · 100 MB total")
 with col2:
     doc_files = st.file_uploader(
         "Reference Document",
         type=list(ALLOWED_DOC_EXT),
-        help="PDF, DOCX, MD, TXT, or JSON — 50 MB total across all files",
         accept_multiple_files=True,
     )
+    st.caption("PDF, DOCX, MD, TXT, JSON · 50 MB total")
 
 
-def _check_total_size(files: list, label: str) -> bool:
+def _check_total_size(files: list, label: str, limit_mb: int) -> bool:
     total = sum(f.size for f in files)
-    if total > MAX_FILE_MB * 1024 * 1024:
+    if total > limit_mb * 1024 * 1024:
         mb = total / 1024 / 1024
-        st.error(f"{label} total size {mb:.1f} MB exceeds the {MAX_FILE_MB} MB limit.")
+        st.error(f"{label} total size {mb:.1f} MB exceeds the {limit_mb} MB limit.")
         return False
     return True
 
 
-audio_ok = _check_total_size(audio_files, "Recording") if audio_files else True
-doc_ok = _check_total_size(doc_files, "Document") if doc_files else True
+audio_ok = _check_total_size(audio_files, "Recording", MAX_AUDIO_MB) if audio_files else True
+doc_ok = _check_total_size(doc_files, "Document", MAX_DOC_MB) if doc_files else True
 
 st.markdown("<div style='height:0.25rem'></div>", unsafe_allow_html=True)
 
