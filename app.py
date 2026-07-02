@@ -4,7 +4,7 @@ Upload a meeting audio file + a reference document to generate:
   • Executive summary
   • Action items (assignee, deadline, source quote)
   • Discrepancy report (audio vs document)
-Output rendered on screen and downloadable as PDF.
+Output rendered on screen and downloadable as PDF or Markdown.
 """
 import os
 import tempfile
@@ -278,14 +278,24 @@ if st.session_state.get("result"):
     todos = analysis.get("todos", [])
     conflicts = analysis.get("conflicts", [])
 
-    st.download_button(
-        label="Download PDF Report",
-        data=result["pdf_bytes"],
-        file_name="meeting_notes.pdf",
-        mime="application/pdf",
-        type="primary",
-        use_container_width=True,
-    )
+    dl_pdf, dl_md = st.columns(2)
+    with dl_pdf:
+        st.download_button(
+            label="Download PDF Report",
+            data=result["pdf_bytes"],
+            file_name="meeting_notes.pdf",
+            mime="application/pdf",
+            type="primary",
+            use_container_width=True,
+        )
+    with dl_md:
+        st.download_button(
+            label="Download Markdown",
+            data=result["markdown"],
+            file_name="meeting_notes.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
 
     st.divider()
 
